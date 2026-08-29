@@ -85,6 +85,8 @@ class WorkspaceTools:
     MAX_OUTPUT_CHARS = 12_000
     MAX_LISTED_FILES = 500
     SKIPPED_DIRS = {".git", ".venv", "venv", "node_modules", "__pycache__"}
+    SENSITIVE_FILENAMES = {".env", "credentials.json", "id_rsa", "id_ed25519"}
+    SENSITIVE_SUFFIXES = {".pem", ".key", ".p12", ".pfx"}
 
     def __init__(
         self,
@@ -148,7 +150,7 @@ class WorkspaceTools:
         for path in sorted(target.rglob("*")):
             if any(part in self.SKIPPED_DIRS for part in path.relative_to(self.root).parts):
                 continue
-            if path.is_file():
+            if path.is_file() and not self._is_sensitive(path):
                 files.append(path.relative_to(self.root).as_posix())
                 if len(files) >= self.MAX_LISTED_FILES:
                     files.append(f"... 已达到 {self.MAX_LISTED_FILES} 个文件的显示上限")
@@ -157,6 +159,7 @@ class WorkspaceTools:
 
     def read_file(self, relative_path: str) -> str:
         target = self._resolve(relative_path)
+        self._reject_sensitive(target)
         if not target.is_file():
             raise ValueError(f"文件不存在：{relative_path}")
         if target.stat().st_size > self.MAX_FILE_BYTES:
@@ -168,6 +171,7 @@ class WorkspaceTools:
         if len(content.encode("utf-8")) > self.MAX_FILE_BYTES:
             raise ValueError("写入内容过大")
         target = self._resolve(relative_path)
+        self._reject_sensitive(target)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
         return f"OK: 已写入 {target.relative_to(self.root).as_posix()}（{len(content)} 字符）"
@@ -176,6 +180,7 @@ class WorkspaceTools:
         if old == "":
             raise ValueError("old_text 不能为空")
         target = self._resolve(relative_path)
+        self._reject_sensitive(target)
         if not target.is_file():
             raise ValueError(f"文件不存在：{relative_path}")
         content = target.read_text(encoding="utf-8")
@@ -225,3 +230,18 @@ class WorkspaceTools:
         if len(output) > self.MAX_OUTPUT_CHARS:
             output = "... 前部输出已截断 ...\n" + output[-self.MAX_OUTPUT_CHARS :]
         return output
+
+    @classmethod
+    def _is_sensitive(cls, path: Path) -> bool:
+        name = path.name.lower()
+        is_env_variant = name.startswith(".env.") and name != ".env.example"
+        return (
+            name in cls.SENSITIVE_FILENAMES
+            or is_env_variant
+            or path.suffix.lower() in cls.SENSITIVE_SUFFIXES
+        )
+
+    @classmethod
+    def _reject_sensitive(cls, path: Path) -> None:
+        if cls._is_sensitive(path):
+            raise ValueError("拒绝通过 Agent 文件工具访问敏感凭据文件")

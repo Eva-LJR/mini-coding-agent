@@ -4,9 +4,6 @@ import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from openai import OpenAI
-
-
 @dataclass(frozen=True)
 class ToolCall:
     id: str
@@ -30,6 +27,12 @@ class OpenAICompatibleClient:
     """Thin adapter around an OpenAI-compatible Chat Completions endpoint."""
 
     def __init__(self, api_key: str, model: str, base_url: str | None = None) -> None:
+        try:
+            from openai import OpenAI
+        except ImportError as exc:
+            raise RuntimeError(
+                "缺少 openai 依赖，请先执行 pip install -r requirements.txt"
+            ) from exc
         kwargs: dict[str, Any] = {"api_key": api_key}
         if base_url:
             kwargs["base_url"] = base_url

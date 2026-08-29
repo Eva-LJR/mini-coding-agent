@@ -1,6 +1,5 @@
-"""A small coding agent implemented without an agent framework."""
+"""A small coding agent implemented without an agent framework.
 
-from .agent import CodingAgent
-from .config import Settings
-
-__all__ = ["CodingAgent", "Settings"]
+Public classes are intentionally not imported here, so the offline tool tests can
+run before optional API dependencies have been installed.
+"""
