@@ -1,6 +1,6 @@
 Mini Coding Agent
 
-Git仓库地址：请在创建公开GitHub或Gitee仓库后填写
+Git仓库地址：https://github.com/Eva-LJR/mini-coding-agent.git
 
 项目简介：本项目是一个从零实现的命令行编程智能体，不使用LangChain、OpenAI Agents SDK、AutoGen等Agent框架。程序直接使用模型原生tool calling，自行管理对话历史、工具调用、执行结果回传和循环终止。Agent可以列出和读取工作区文件、完整写入或局部修改文件，并在用户确认后运行本地命令。
 
